@@ -5,6 +5,7 @@ import {
   CreateAccountInput,
   CreateAccountOutput,
 } from './dtos/create-account.dto';
+import { LoginInput, LoginOutput } from './dtos/login.dto';
 
 //resolver 는 input읅 가지고 output만해준다 .
 
@@ -27,6 +28,19 @@ export class UsersRecolver {
       return { ok, error };
     } catch (e) {
       return { ok: false, error: e };
+    }
+  }
+
+  @Mutation((returns) => LoginOutput)
+  async login(@Args('input') loginInput: LoginInput): Promise<LoginOutput> {
+    try {
+      const { ok, error, token } = await this.userService.login(loginInput);
+      return { ok, error, token };
+    } catch (e) {
+      return {
+        ok: false,
+        error: e,
+      };
     }
   }
 }
