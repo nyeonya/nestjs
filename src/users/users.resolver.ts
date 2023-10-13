@@ -43,4 +43,7 @@ export class UsersRecolver {
       };
     }
   }
+
+  @Query((returns) => User)
+  me() {}
 }
