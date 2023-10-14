@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { User } from './entities/users.entity';
 import { UsersService } from './users.service';
 import {
@@ -6,17 +6,17 @@ import {
   CreateAccountOutput,
 } from './dtos/create-account.dto';
 import { LoginInput, LoginOutput } from './dtos/login.dto';
+import { UseGuards } from '@nestjs/common';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthUser } from 'src/auth/auth-user.decorator';
+import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
+import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
 
 //resolver 는 input읅 가지고 output만해준다 .
 
 @Resolver((of) => User)
 export class UsersRecolver {
   constructor(private readonly userService: UsersService) {}
-
-  @Query((returns) => Boolean)
-  hi() {
-    return true;
-  }
 
   @Mutation((returns) => CreateAccountOutput)
   async createAccount(
@@ -45,5 +45,48 @@ export class UsersRecolver {
   }
 
   @Query((returns) => User)
-  me() {}
+  @UseGuards(AuthGuard)
+  me(@AuthUser() authUser: User) {
+    return authUser;
+  }
+
+  @UseGuards(AuthGuard)
+  @Query((returns) => UserProfileOutput)
+  async userProfile(
+    @Args() userProfileInput: UserProfileInput,
+  ): Promise<UserProfileOutput> {
+    try {
+      const user = await this.userService.findById(userProfileInput.userId);
+      if (!user) {
+        throw Error();
+      }
+      return {
+        ok: true,
+        user,
+      };
+    } catch (e) {
+      return {
+        error: 'User Not found',
+        ok: false,
+      };
+    }
+  }
+  @UseGuards(AuthGuard)
+  @Mutation((returns) => EditProfileOutput)
+  async editProfile(
+    @AuthUser() authUser: User,
+    @Args('input') editProfile: EditProfileInput,
+  ): Promise<EditProfileOutput> {
+    try {
+      await this.userService.editProfile(authUser.id, editProfile);
+      return {
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        error: e,
+      };
+    }
+  }
 }
