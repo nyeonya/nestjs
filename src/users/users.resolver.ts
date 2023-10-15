@@ -11,6 +11,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { AuthUser } from 'src/auth/auth-user.decorator';
 import { UserProfileInput, UserProfileOutput } from './dtos/user-profile.dto';
 import { EditProfileInput, EditProfileOutput } from './dtos/edit-profile.dto';
+import { VerifyEmailInput, VerifyEmailOutput } from './dtos/verify-email.dto';
 
 //resolver 는 input읅 가지고 output만해준다 .
 
@@ -79,6 +80,23 @@ export class UsersRecolver {
   ): Promise<EditProfileOutput> {
     try {
       await this.userService.editProfile(authUser.id, editProfile);
+      return {
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        error: e,
+      };
+    }
+  }
+
+  @Mutation((returns) => VerifyEmailOutput)
+  async verifyEmail(
+    @Args('input') verifyEmailInput: VerifyEmailInput,
+  ): Promise<VerifyEmailOutput> {
+    try {
+      this.userService.verifyEmail(verifyEmailInput.code);
       return {
         ok: true,
       };

@@ -8,11 +8,14 @@ import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from 'src/jwt/jwt.service';
 import { EditProfileInput } from './dtos/edit-profile.dto';
+import { Verification } from './entities/verification.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Verification)
+    private readonly verification: Repository<Verification>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -31,8 +34,11 @@ export class UsersService {
         //
         return { ok: false, error: 'email already' };
       }
-      await this.users.save(this.users.create({ email, password, role }));
-      return { ok: false };
+      const user = await this.users.save(
+        this.users.create({ email, password, role }),
+      );
+      await this.verification.save(this.verification.create({ user }));
+      return { ok: true };
     } catch (e) {
       return { ok: false, error: 'eeee' };
     }
@@ -43,7 +49,10 @@ export class UsersService {
     password,
   }: LoginInput): Promise<{ ok: boolean; error?: string; token?: string }> {
     try {
-      const user = await this.users.findOne({ where: { email } });
+      const user = await this.users.findOne({
+        where: { email },
+        select: ['password', 'id'],
+      });
 
       if (!user) {
         return {
@@ -82,10 +91,29 @@ export class UsersService {
     const user = await this.users.findOne({ where: { id: userId } });
     if (email) {
       user.email = email;
+      user.verified = false;
+      await this.verification.save(this.verification.create({ user }));
     }
     if (password) {
       user.password = password;
     }
     return this.users.save(user);
+  }
+
+  async verifyEmail(code: string): Promise<boolean> {
+    try {
+      const verification1 = await this.verification.findOne({
+        where: { code },
+        relations: ['user'],
+      });
+      if (verification1) {
+        console.log(verification1);
+        verification1.user.verified = true;
+        this.users.save(verification1.user);
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 }
